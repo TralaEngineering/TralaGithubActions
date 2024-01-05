@@ -33,7 +33,6 @@ runs:
   steps:
     # Diagnostics: Verify the STS caller.
     - id: verify-sts
-      working-directory: $${{ inputs.working_directory }}
       run: aws sts get-caller-identity
       shell: bash
 
