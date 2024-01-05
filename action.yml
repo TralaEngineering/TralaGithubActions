@@ -33,7 +33,7 @@ runs:
   steps:
     # Diagnostics: Verify the STS caller.
     - id: verify-sts
-      working_directory: $${{ inputs.working_directory }}
+      working-directory: $${{ inputs.working_directory }}
       run: aws sts get-caller-identity
       shell: bash
 
@@ -45,7 +45,7 @@ runs:
     # This step validates the Terraform content within the working folder. It's
     # OK if it fails, but it likely means a formatting issue with the code.
     - id: terraform-validate
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         terraform fmt -check -diff -recursive
         terraform init -backend=false
@@ -58,14 +58,14 @@ runs:
     # State Bucket:
     # https://s3.console.aws.amazon.com/s3/buckets/trala-terraform?region=us-east-1&tab=objects
     - id: terraform-init
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         terraform init -input='false' -backend-config "bucket=trala-terraform"
       shell: bash
 
     # Provision (or use) a workspace. Terraform may raise an error, but that's okay.
     - id: terraform-workspace
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         terraform workspace select -or-create ${{ inputs.workspace }}
       shell: bash
@@ -73,14 +73,14 @@ runs:
     # Print out a list of resources managed by Terraform in the current
     # workspace; this is mostly for diagnostic purposes.
     - id: terraform-state-list
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         terraform state list || echo "No state file found, continuing..."
       shell: bash
 
     # Pull Terraform modules (if any).
     - id: terraform-get
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         terraform get
       shell: bash
@@ -88,7 +88,7 @@ runs:
     # Create a plan of changes from the old state to the new state and save
     # it in a plan file for the workspace.
     - id: terraform-plan
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       env:
         VAR_FILE: ${{ inputs.plan_var_file }}
         IMAGE_TAG: ${{ inputs.hapicore_image_tag }}
@@ -101,7 +101,7 @@ runs:
 
     # Diagnostics: Print out a list of configured providers, i.e. AWS.
     - id: terraform-providers
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         terraform providers
       shell: bash
@@ -110,14 +110,14 @@ runs:
     # Optionally skipped if skip_apply is true; useful for testing plans.
     - if: ${{ ! inputs.skip_apply }}
       id: terraform-apply
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         terraform apply terraform-${{ inputs.workspace }}.plan
       shell: bash
 
     - if: ${{ ! startsWith(inputs.workspace, 'iam') && ! inputs.skip_apply }}
       id: progress-sync-rev
-      working_directory: $${{ inputs.working_directory }} 
+      working-directory: $${{ inputs.working_directory }} 
       run: |
         # `terraform` is a wrapper around `terraform-bin`, which includes
         # extraneous output information we don't need:
