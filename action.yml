@@ -108,14 +108,14 @@ runs:
 
     # Based on the generated plan above, deploy the resources to AWS.
     # Optionally skipped if skip_apply is true; useful for testing plans.
-    - if: ${{ ! inputs.skip_apply }}
+    - if: ${{ !inputs.skip_apply }}
       id: terraform-apply
       working-directory: ${{ inputs.working_directory }} 
       run: |
         terraform apply terraform-${{ inputs.workspace }}.plan
       shell: bash
 
-    - if: ${{ ! startsWith(inputs.workspace, 'iam') && ! inputs.skip_apply }}
+    - if: ${{ !startsWith(inputs.workspace, 'iam') && !inputs.skip_apply }}
       id: progress-sync-rev
       working-directory: ${{ inputs.working_directory }} 
       run: |
