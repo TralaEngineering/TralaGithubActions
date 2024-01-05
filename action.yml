@@ -115,7 +115,7 @@ runs:
         terraform apply terraform-${{ inputs.workspace }}.plan
       shell: bash
 
-    - if: ${{ inputs.workspace != 'iam' && inputs.skip_apply != 'true' }}
+    - if: ${{ inputs.skip_apply != 'true' }}
       id: progress-sync-rev
       working-directory: ${{ inputs.working_directory }} 
       run: |
