@@ -1,4 +1,2 @@
-# TralaGithubActions
-A repository containing actions for complex tasks.
-
-NOTE: DO NOT STORE ANY INTERNAL KEYS OR PROPERTIES HERE AS IT IS PUBLIC. ALL ACTIONS ARE REQUIRED TO TAKE THOSE PROPERTIES AND KEYS AS INPUT VALUES
+# Trala Terraform Action
+A repository containing the complex action for deploying to terraform.
