@@ -1,0 +1,104 @@
+name: Terraform Action
+description: 'Runs the Terraform Action'
+inputs:
+  # How to manage workflow concurrency, for example 'staging'.
+  terraform_concurrency_context:
+    required: true
+    type: string
+  # Folder from where we're deploying Terraform resources, such as './terraform/core'
+  working_directory:
+    required: true
+    type: string
+  # The Terraform workspace, i.e. 'iam', 'staging', etc.
+  workspace:
+    required: true
+    type: string
+  # Path of any plan variable file passed to plan and apply; optional.
+  plan_var_file:
+    required: false
+    type: string
+  hapicore_image_tag:
+    required: false
+    type: string
+  skip_apply:
+    required: false
+    default: false
+    type: boolean
+outputs:
+  progress_sync_task_revision:
+    description: "The ARN of the newly deployed Progress Sync task."
+    value: ${{ jobs.terraform.outputs.progress_sync_task_revision }}
+runs:
+  using: "composite"
+  steps:
+    # Diagnostics: Verify the STS caller.
+    - run: aws sts get-caller-identity
+
+    # Configure Terraform. For now, pin it to 1.5.7.
+    - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.6.0
+
+    # This step validates the Terraform content within the working folder. It's
+      # OK if it fails, but it likely means a formatting issue with the code.
+    - run: |
+        terraform fmt -check -diff -recursive
+        terraform init -backend=false
+        terraform validate
+      continue-on-error: true
+    
+    # Initialize Terraform. We manage state in S3 and a lock in Dynamo.
+    #
+    # State Bucket:
+    # https://s3.console.aws.amazon.com/s3/buckets/trala-terraform?region=us-east-1&tab=objects
+    - id: terraform-init
+      run: |
+        terraform init -input='false' -backend-config "bucket=trala-terraform"
+
+    # Provision (or use) a workspace. Terraform may raise an error, but that's okay.
+    - id: terraform-workspace
+      run: |
+        terraform workspace select -or-create ${{ inputs.workspace }}
+
+    # Print out a list of resources managed by Terraform in the current
+    # workspace; this is mostly for diagnostic purposes.
+    - id: terraform-state-list
+      run: |
+        terraform state list || echo "No state file found, continuing..."
+
+    # Pull Terraform modules (if any).
+      - id: terraform-get
+        run: |
+          terraform get
+
+    # Create a plan of changes from the old state to the new state and save
+    # it in a plan file for the workspace.
+    - id: terraform-plan
+      env:
+        VAR_FILE: ${{ inputs.plan_var_file }}
+        IMAGE_TAG: ${{ inputs.hapicore_image_tag }}
+      run: |
+        if [[ -n $IMAGE_TAG ]]; then
+          printf "\nhapicore_image_tag = \"$IMAGE_TAG\"\n" >> $VAR_FILE
+        fi
+        terraform plan ${VAR_FILE:+"-var-file=$VAR_FILE"} -out=terraform-${{ inputs.workspace }}.plan
+
+    # Diagnostics: Print out a list of configured providers, i.e. AWS.
+    - id: terraform-providers
+      run: |
+        terraform providers
+
+    # Based on the generated plan above, deploy the resources to AWS.
+    # Optionally skipped if skip_apply is true; useful for testing plans.
+    - if: ${{ ! inputs.skip_apply }}
+      id: terraform-apply
+      run: |
+        terraform apply terraform-${{ inputs.workspace }}.plan
+
+    - if: ${{ ! startsWith(inputs.workspace, 'iam') && ! inputs.skip_apply }}
+      id: progress-sync-rev
+      run: |
+        # `terraform` is a wrapper around `terraform-bin`, which includes
+        # extraneous output information we don't need:
+        arn=`terraform-bin output -raw progress_sync_task_arn`
+        echo "progress_sync_task_revision=$arn" >> "$GITHUB_OUTPUT"
