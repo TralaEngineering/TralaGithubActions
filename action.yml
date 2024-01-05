@@ -67,9 +67,9 @@ runs:
         terraform state list || echo "No state file found, continuing..."
 
     # Pull Terraform modules (if any).
-      - id: terraform-get
-        run: |
-          terraform get
+    - id: terraform-get
+      run: |
+        terraform get
 
     # Create a plan of changes from the old state to the new state and save
     # it in a plan file for the workspace.
