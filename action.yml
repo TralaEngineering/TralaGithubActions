@@ -122,9 +122,5 @@ runs:
         # `terraform` is a wrapper around `terraform-bin`, which includes
         # extraneous output information we don't need:
         arn=`terraform-bin output -raw progress_sync_task_arn`
-        {
-          echo 'progress_sync_task_revision<<EOF'
-          $arn
-          echo EOF
-        } >> "$GITHUB_OUTPUT"
+        echo "::set-output name=progress_sync_task_revision::$arn"
       shell: bash
