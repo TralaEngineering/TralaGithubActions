@@ -33,8 +33,9 @@ runs:
   steps:
     # Diagnostics: Verify the STS caller.
     - run: aws sts get-caller-identity
+      shell: bash
 
-    # Configure Terraform. For now, pin it to 1.5.7.
+    # Configure Terraform. For now, pin it to 1.6.0.
     - uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: 1.6.0
@@ -45,6 +46,7 @@ runs:
         terraform fmt -check -diff -recursive
         terraform init -backend=false
         terraform validate
+      shell: bash
       continue-on-error: true
     
     # Initialize Terraform. We manage state in S3 and a lock in Dynamo.
@@ -54,22 +56,26 @@ runs:
     - id: terraform-init
       run: |
         terraform init -input='false' -backend-config "bucket=trala-terraform"
+      shell: bash
 
     # Provision (or use) a workspace. Terraform may raise an error, but that's okay.
     - id: terraform-workspace
       run: |
         terraform workspace select -or-create ${{ inputs.workspace }}
+      shell: bash
 
     # Print out a list of resources managed by Terraform in the current
     # workspace; this is mostly for diagnostic purposes.
     - id: terraform-state-list
       run: |
         terraform state list || echo "No state file found, continuing..."
+      shell: bash
 
     # Pull Terraform modules (if any).
     - id: terraform-get
       run: |
         terraform get
+      shell: bash
 
     # Create a plan of changes from the old state to the new state and save
     # it in a plan file for the workspace.
@@ -82,11 +88,13 @@ runs:
           printf "\nhapicore_image_tag = \"$IMAGE_TAG\"\n" >> $VAR_FILE
         fi
         terraform plan ${VAR_FILE:+"-var-file=$VAR_FILE"} -out=terraform-${{ inputs.workspace }}.plan
+      shell: bash
 
     # Diagnostics: Print out a list of configured providers, i.e. AWS.
     - id: terraform-providers
       run: |
         terraform providers
+      shell: bash
 
     # Based on the generated plan above, deploy the resources to AWS.
     # Optionally skipped if skip_apply is true; useful for testing plans.
@@ -94,6 +102,7 @@ runs:
       id: terraform-apply
       run: |
         terraform apply terraform-${{ inputs.workspace }}.plan
+      shell: bash
 
     - if: ${{ ! startsWith(inputs.workspace, 'iam') && ! inputs.skip_apply }}
       id: progress-sync-rev
@@ -102,3 +111,4 @@ runs:
         # extraneous output information we don't need:
         arn=`terraform-bin output -raw progress_sync_task_arn`
         echo "progress_sync_task_revision=$arn" >> "$GITHUB_OUTPUT"
+      shell: bash
