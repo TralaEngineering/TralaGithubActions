@@ -27,7 +27,7 @@ inputs:
 outputs:
   progress_sync_task_revision:
     description: "The ARN of the newly deployed Progress Sync task."
-    value: ${{ jobs.terraform.outputs.progress_sync_task_revision }}
+    value: ${{ steps.progress-sync-rev.outputs.progress_sync_task_revision }}
 runs:
   using: "composite"
   steps:
