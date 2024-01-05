@@ -108,19 +108,23 @@ runs:
 
     # Based on the generated plan above, deploy the resources to AWS.
     # Optionally skipped if skip_apply is true; useful for testing plans.
-    - if: ${{ !inputs.skip_apply }}
-      id: terraform-apply
+    - id: terraform-apply
       working-directory: ${{ inputs.working_directory }} 
       run: |
-        terraform apply terraform-${{ inputs.workspace }}.plan
+        if [[ "${{inputs.skip_apply}}" != "true"]]; then
+          terraform apply terraform-${{ inputs.workspace }}.plan
+        fi
+        exit 0
       shell: bash
 
-    - if: ${{ !inputs.skip_apply }}
-      id: progress-sync-rev
+    - id: progress-sync-rev
       working-directory: ${{ inputs.working_directory }} 
       run: |
-        # `terraform` is a wrapper around `terraform-bin`, which includes
-        # extraneous output information we don't need:
-        arn=`terraform-bin output -raw progress_sync_task_arn`
-        echo "progress_sync_task_revision=$arn" >> "$GITHUB_OUTPUT"
+        if [[ "${{inputs.skip_apply}}" != "true" ]]; then
+          # `terraform` is a wrapper around `terraform-bin`, which includes
+          # extraneous output information we don't need:
+          arn=`terraform-bin output -raw progress_sync_task_arn`
+          echo "progress_sync_task_revision=$arn" >> "$GITHUB_OUTPUT"
+        fi
+        exit 0
       shell: bash
