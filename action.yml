@@ -24,10 +24,6 @@ inputs:
     required: false
     default: false
     type: boolean
-outputs:
-  progress_sync_task_revision:
-    description: "The ARN of the newly deployed Progress Sync task."
-    value: ${{ steps.progress-sync-rev.outputs.progress_sync_task_revision }}
 runs:
   using: "composite"
   steps:
@@ -38,7 +34,7 @@ runs:
       shell: bash
 
     # Configure Terraform. For now, pin it to 1.6.0.
-    - uses: hashicorp/setup-terraform@v2
+    - uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.6.0
 
@@ -113,14 +109,4 @@ runs:
       working-directory: ${{ inputs.working_directory }} 
       run: |
         terraform apply terraform-${{ inputs.workspace }}.plan
-      shell: bash
-
-    - if: ${{ inputs.skip_apply != 'true' }}
-      id: progress-sync-rev
-      working-directory: ${{ inputs.working_directory }} 
-      run: |
-        # `terraform` is a wrapper around `terraform-bin`, which includes
-        # extraneous output information we don't need:
-        arn=`terraform-bin output -raw progress_sync_task_arn`
-        echo "::set-output name=progress_sync_task_revision::$arn"
       shell: bash
